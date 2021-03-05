@@ -2,6 +2,7 @@
 #include <GyverButton.h>
 #include <fontALL.h>
 #include <stdint.h>
+#include <Entropy.h>
 
 // My types
 #define uint8_t u8
@@ -15,7 +16,7 @@ PROGMEM const unsigned char russianFont[][8] = {
   {0b11111100, 0b10000010, 0b10000010, 0b11111110, 0b10000001, 0b10000001, 0b10000001, 0b11111110}, // В
   {0b11111111, 0b10000000, 0b10000000, 0b10000000, 0b10000000, 0b10000000, 0b10000000, 0b10000000}, // Г
   {0b00111100, 0b01000010, 0b01000010, 0b01000010, 0b01000010, 0b11111111, 0b10000001, 0b10000001}, // Д
-  {0b11111111, 0b10000000, 0b10000000, 0b11111100, 0b10000000, 0b10000000, 0b10000000, 0b11111111} // Е
+  {0b11111111, 0b10000000, 0b10000000, 0b11111100, 0b10000000, 0b10000000, 0b10000000, 0b11111111}, // Е
 };
 
 TVout TV;
@@ -191,6 +192,48 @@ u8 getPressedButton(GButton* keyboard, u16 analog)
   return NOT_SEL;
 }
 
+bool inArray(u8* numbers, u8 count, u8 number)
+{
+  for (u8 i = 0; i < count; i++)
+    if (numbers[i] == number)
+      return true;
+
+  return false;
+}
+
+void shuffleArray(u8* arr, u8 c)
+{
+  u8 last = 0;
+  u8 temp = arr[last];
+  for (u8 i = 0; i < c; i++)
+  {
+    u8 index = random(c);
+    arr[last] = arr[index];
+    last = index;
+  }
+  arr[last] = temp;
+}
+
+void randomCardsMap(u8* cardsMap)
+{
+  u8 randomNumber;
+  for (u8 i = 0; i < KEYBOARD_SIZE / 2; i++)
+  {
+    while (true)
+    {
+      randomNumber = random(0, 6);
+      if (!inArray(cardsMap, KEYBOARD_SIZE / 2, randomNumber))
+      {
+        cardsMap[i] = randomNumber;
+        cardsMap[i + 3] = randomNumber;
+        break;
+      }
+    }
+  }
+
+  shuffleArray(cardsMap, KEYBOARD_SIZE);
+}
+
 // ------------ Setup ------------
 void setup()
 {
@@ -198,17 +241,16 @@ void setup()
 
   TV.select_font(font8x8ext);
   
-//  Serial.begin(9600);
-  
   keyboard_init(keyboard);
 }
 
 // ------------ Loop ------------
-u8 cardsMap[KEYBOARD_SIZE] = { 0, 1, 1, 0, 2, 2 };
+u8 cardsMap[KEYBOARD_SIZE];
 GameEngine* engine;
+
 void loop()
 {
-  
+  randomCardsMap(cardsMap);
   engine = new GameEngine(cardsMap);
 
 // ------------ Game loop ------------
@@ -236,6 +278,15 @@ void loop()
   }
   TV.clear_screen();
   TV.println("You win! <3");
-  TV.delay(5000);
+  TV.delay(2000);
   TV.clear_screen();
+
+  for (u8 i = 0; i < KEYBOARD_SIZE; i++)
+  {
+    delete engine->cards[i];
+    engine->cards[i] = NULL;
+  }
+
+  delete engine;
+  engine = NULL;
 }
